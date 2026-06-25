@@ -1,0 +1,253 @@
+{
+  "info": {
+    "name": "Quote Request API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Backend service for managing quote requests with FastAPI integration"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Healthy', () => pm.expect(pm.response.json().status).to.eql('healthy'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Quote",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/quotes",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customer\": \"Delta Engineering\",\n  \"project\": \"Solar Farm Installation\",\n  \"estimatedValue\": 2500000\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "const id = pm.response.json().data.id;",
+              "pm.collectionVariables.set('quoteId', id);",
+              "pm.test('Has ID', () => pm.expect(id).to.be.a('string'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Quote - Validation Error",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/quotes",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"project\": \"Missing Customer\",\n  \"estimatedValue\": -100\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 422', () => pm.response.to.have.status(422));",
+              "pm.test('Has errors', () => pm.expect(pm.response.json().error.errors).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Quotes",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/quotes?page=1&limit=10",
+          "host": ["{{baseUrl}}"],
+          "path": ["quotes"],
+          "query": [
+            { "key": "page", "value": "1" },
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has data array', () => pm.expect(pm.response.json().data).to.be.an('array'));",
+              "pm.test('Has pagination meta', () => pm.expect(pm.response.json().meta).to.have.property('totalPages'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Quotes - Search",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/quotes?q=Delta",
+          "host": ["{{baseUrl}}"],
+          "path": ["quotes"],
+          "query": [
+            { "key": "q", "value": "Delta" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List Quotes - Filter by Status",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/quotes?status=New",
+          "host": ["{{baseUrl}}"],
+          "path": ["quotes"],
+          "query": [
+            { "key": "status", "value": "New" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Quote by ID",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/quotes/{{quoteId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Correct ID', () => pm.expect(pm.response.json().data.id).to.eql(pm.collectionVariables.get('quoteId')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Quote - Not Found",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/quotes/00000000-0000-0000-0000-000000000000"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analyze Quote",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/quotes/{{quoteId}}/analyze"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has risk', () => pm.expect(pm.response.json().data.analysis.risk).to.be.a('string'));",
+              "pm.test('Has confidence', () => pm.expect(pm.response.json().data.analysis.confidence).to.be.a('number'));",
+              "pm.test('Has missing items', () => pm.expect(pm.response.json().data.analysis.missingItems).to.be.an('array'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Status - Valid (New → In Review)",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/quotes/{{quoteId}}/status",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"In Review\",\n  \"version\": 1\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status updated', () => pm.expect(pm.response.json().data.status).to.eql('In Review'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Status - Invalid Transition",
+      "request": {
+        "method": "PATCH",
+        "url": "{{baseUrl}}/quotes/{{quoteId}}/status",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"New\",\n  \"version\": 2\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 409', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

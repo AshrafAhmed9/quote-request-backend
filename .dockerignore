@@ -1,0 +1,8 @@
+node_modules
+dist
+generated
+*.db
+*.db-journal
+.env
+.git
+docs/screenshots

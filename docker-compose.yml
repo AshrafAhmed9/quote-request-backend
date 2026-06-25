@@ -1,0 +1,27 @@
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATABASE_URL=file:./dev.db
+      - FASTAPI_URL=http://fastapi:8000
+      - FASTAPI_TIMEOUT=10000
+      - FASTAPI_MOCK_ENABLED=false
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    restart: unless-stopped
+
+  fastapi:
+    build: ./fastapi-service
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
